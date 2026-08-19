@@ -50,8 +50,12 @@ CyberSecurity-Projects-/
   * `[+]` **Interactive Arrow-Key Menu**: Pure Python terminal UI with unbuffered keyboard navigation (`^`/`v`, `[ENTER]`, `[ESC]`) and Unicode box drawing.
   * `[*]` **Dual-Layer Host & MAC Resolution**: Combines unprivileged `nmap -sn` sweeps with kernel ARP cache inspection (`/proc/net/arp`) for full Layer-2 & Layer-3 host visibility.
   * `[~]` **Hardware OUI & Mobile MAC Resolver**: Matches IEEE OUI vendor databases (`oui.txt`, `nmap-mac-prefixes`) and detects randomized private MACs on smartphones.
-  * `[#]` **SQLite Device Registry**: Database persistence (`state/network.db`) with an interactive alias management workflow.
+  * `[=]` **SQLite Device Registry**: Database persistence (`state/network.db`) with an interactive alias management workflow.
   * `[!]` **Live Monitor & Background Daemon**: Detached background scanning service (~14.6 MB RAM footprint) with native desktop popup alerts (`notify-send`) when unauthorized devices connect.
+* **Quick Run**:
+  * `[Linux]` : `chmod +x ./Home\ Network\ Mapper/user_interaction.py && ./Home\ Network\ Mapper/user_interaction.py`
+  * `[macOS]` : `python3 "Home Network Mapper/user_interaction.py"`
+  * `[Windows]`: `python "Home Network Mapper\user_interaction.py"` (PowerShell / Windows Terminal)
 
 ---
 

@@ -112,21 +112,67 @@ CREATE TABLE IF NOT EXISTS alerts (
 
 ---
 
-## [05] Getting Started
+## [05] Installation & How to Run (Linux, macOS, Windows)
 
-### 1. Prerequisites
-* **Operating System**: Linux (Ubuntu, Debian, Arch, Fedora, etc.) or macOS
-* **Python**: Python 3.10+
-* **Nmap**: Network exploration tool (`sudo apt install nmap`)
-* **Notify-Send** *(Optional, for desktop popups)*: `sudo apt install libnotify-bin`
+### [>] Prerequisites
+* **Python**: Python 3.10 or newer (built 100% on Python standard library modules: `sqlite3`, `socket`, `subprocess`, `threading`, `termios`/`msvcrt`—no external pip packages required!).
+* **Nmap**: Command-line network scanner.
 
-### 2. Running the Application
+---
 
-Make the launcher executable and run:
-```bash
-chmod +x ./Home\ Network\ Mapper/user_interaction.py
-./Home\ Network\ Mapper/user_interaction.py
-```
+### [A] Linux (Ubuntu, Debian, Kali, Arch, Fedora)
+
+1. **Install Nmap & Notification Tools**:
+   ```bash
+   # Ubuntu / Debian / Kali / Linux Mint:
+   sudo apt update && sudo apt install -y nmap libnotify-bin
+
+   # Arch Linux / Manjaro:
+   sudo pacman -S nmap libnotify
+
+   # Fedora / RHEL:
+   sudo dnf install nmap libnotify
+   ```
+
+2. **Execute Home Network Mapper**:
+   ```bash
+   chmod +x ./Home\ Network\ Mapper/user_interaction.py
+   ./Home\ Network\ Mapper/user_interaction.py
+   ```
+
+---
+
+### [B] macOS (Apple Silicon & Intel)
+
+1. **Install Nmap via Homebrew**:
+   ```bash
+   brew install nmap
+   ```
+
+2. **Execute Home Network Mapper**:
+   ```bash
+   python3 "Home Network Mapper/user_interaction.py"
+   ```
+
+---
+
+### [C] Windows (Windows 10 & Windows 11)
+
+1. **Install Nmap**:
+   * Open **PowerShell** and run:
+     ```powershell
+     winget install Insecure.Nmap
+     ```
+   * *Alternatively, download the official `.exe` setup from [nmap.org/download.html](https://nmap.org/download.html).*
+   * Make sure `nmap` is added to your Windows system `PATH`.
+
+2. **Execute in Windows Terminal, PowerShell, or CMD**:
+   ```powershell
+   python "Home Network Mapper\user_interaction.py"
+   ```
+   *(Windows Terminal or modern PowerShell 7 is recommended for clean Unicode box rendering and full ANSI color support).*
+
+---
 
 ---
 
