@@ -42,6 +42,18 @@ def get_default_route_info() -> tuple[str, str, str]:
     except Exception:
         pass
 
+    # Windows route print 0.0.0.0 fallback
+    if default_gateway == "127.0.0.1":
+        try:
+            out = subprocess.check_output(["route", "print", "0.0.0.0"], stderr=subprocess.DEVNULL).decode(errors="ignore")
+            # Format: 0.0.0.0          0.0.0.0      192.168.1.1     192.168.1.50     25
+            m_win = re.search(r"0\.0\.0\.0\s+0\.0\.0\.0\s+([0-9\.]+)\s+([0-9\.]+)", out)
+            if m_win:
+                default_gateway = m_win.group(1)
+                local_ip = m_win.group(2)
+        except Exception:
+            pass
+
     # Fallback for local IP if not found in route table
     if local_ip == "127.0.0.1":
         try:
@@ -51,6 +63,10 @@ def get_default_route_info() -> tuple[str, str, str]:
             s.close()
         except Exception:
             pass
+
+    # Fallback for default gateway to .1 if on private class C subnet
+    if default_gateway == "127.0.0.1" and local_ip != "127.0.0.1" and "." in local_ip:
+        default_gateway = f"{local_ip.rsplit('.', 1)[0]}.1"
 
     return default_gateway, default_dev, local_ip
 

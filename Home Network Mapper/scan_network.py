@@ -4,8 +4,36 @@ Executes Nmap discovery scans (ping/host scan), manages raw scan logs, and recor
 """
 
 import os
+import shutil
 import subprocess
 import datetime
+
+
+def is_nmap_installed() -> bool:
+    """
+    Checks if the 'nmap' binary is installed and available in the system PATH.
+    """
+    return shutil.which("nmap") is not None
+
+
+def get_nmap_install_instructions() -> list[str]:
+    """
+    Returns platform-specific instructions for installing Nmap.
+    """
+    return [
+        "'nmap' was not found on your system PATH.",
+        "Nmap is required to perform network discovery scans.",
+        "",
+        "How to install Nmap:",
+        " • Ubuntu / Debian : sudo apt update && sudo apt install -y nmap",
+        " • Arch Linux      : sudo pacman -S nmap",
+        " • Fedora / RHEL   : sudo dnf install nmap",
+        " • macOS (Homebrew): brew install nmap",
+        " • Windows         : winget install Insecure.Nmap",
+        "                     or download installer from https://nmap.org",
+        "",
+        "Once installed, restart the scan to discover devices!"
+    ]
 
 # Base paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

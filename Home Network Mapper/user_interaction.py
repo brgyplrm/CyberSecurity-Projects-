@@ -282,6 +282,16 @@ def screen_scan_networks(network_name: str, ip_addr: str):
             break
 
         elif choice == 0:
+            if not scan_network.is_nmap_installed():
+                clear_screen()
+                ui.print_banner(
+                    "NMAP NOT INSTALLED",
+                    scan_network.get_nmap_install_instructions(),
+                    color="red"
+                )
+                wait_for_key()
+                continue
+
             clear_screen()
             ui.print_banner(
                 "NMAP SCANNER",
@@ -359,13 +369,23 @@ def screen_scan_networks(network_name: str, ip_addr: str):
 
 def run_background_monitor(subnet: str):
     """Runs automated continuous network discovery in the background."""
+    if not scan_network.is_nmap_installed():
+        clear_screen()
+        ui.print_banner(
+            "NMAP NOT INSTALLED",
+            scan_network.get_nmap_install_instructions(),
+            color="red"
+        )
+        wait_for_key()
+        return
+
     clear_screen()
     ui.print_banner(
         "AUTOMATED NETWORK MONITOR",
         [
             f"Active Subnet : {subnet}",
             "Continuously scanning network for unknown / rogue devices.",
-            "Desktop notifications (notify-send) are active.",
+            "Desktop notifications are active.",
             "Press [ESC] or [q] to stop monitoring and return to menu."
         ],
         color="yellow"

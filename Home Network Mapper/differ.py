@@ -6,6 +6,7 @@ Compares active scan results against the SQLite device database to detect:
 3. Returning devices.
 """
 
+import os
 import subprocess
 import storage
 
@@ -13,17 +14,41 @@ import storage
 def send_desktop_notification(title: str, message: str, urgency: str = "critical"):
     """
     Triggers a native Linux/macOS/Windows desktop notification.
-    Uses 'notify-send' on Linux.
+    Uses 'notify-send' on Linux, and PowerShell balloon notification on Windows.
     """
+    # 1. Linux notify-send
     try:
-        subprocess.run(
+        res = subprocess.run(
             ["notify-send", "-u", urgency, "-a", "Home Network Mapper", title, message],
             stderr=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             check=False
         )
+        if res.returncode == 0:
+            return
     except Exception:
         pass
+
+    # 2. Windows PowerShell Toast / Balloon Notification
+    if os.name == "nt":
+        try:
+            safe_msg = message.replace('"', "'").replace("\n", " ")
+            safe_title = title.replace('"', "'")
+            ps_script = (
+                f'[reflection.assembly]::loadwithpartialname("System.Windows.Forms"); '
+                f'$n = new-object system.windows.forms.notifyicon; '
+                f'$n.icon = [system.drawing.systemicons]::Information; '
+                f'$n.visible = $true; '
+                f'$n.showballoontip(10, "{safe_title}", "{safe_msg}", [system.windows.forms.tooltipicon]::Info)'
+            )
+            subprocess.run(
+                ["powershell", "-WindowStyle", "Hidden", "-Command", ps_script],
+                stderr=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                check=False
+            )
+        except Exception:
+            pass
 
 
 def analyze_and_update_state(discovered_hosts: list[dict]) -> dict:

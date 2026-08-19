@@ -31,23 +31,37 @@ def get_system_arp_cache() -> dict[str, str]:
         except Exception:
             pass
 
-    # 2. 'ip neigh' fallback
+    # 2. 'ip neigh' (Linux) & 'arp -a' (Windows / macOS) fallback
     try:
+        # Try ip neigh first (Linux)
         out = subprocess.check_output(["ip", "neigh", "show"], stderr=subprocess.DEVNULL).decode()
         for line in out.splitlines():
-            # Format: '192.168.254.254 dev enp34s0 lladdr 6c:a4:d1:e5:9b:40 ...'
             m = re.search(r"^([0-9\.]+)\s+.*?lladdr\s+([0-9A-Fa-f:]{17})", line)
             if m:
                 arp_map[m.group(1)] = m.group(2).upper()
     except Exception:
         pass
 
+    if not arp_map:
+        try:
+            # Try arp -a (Windows & macOS)
+            out = subprocess.check_output(["arp", "-a"], stderr=subprocess.DEVNULL).decode(errors="ignore")
+            for line in out.splitlines():
+                m = re.search(r"([0-9\.]+)\s+([0-9A-Fa-f\-\:]{17})", line)
+                if m:
+                    ip_val = m.group(1)
+                    mac_val = m.group(2).replace("-", ":").upper()
+                    if mac_val != "FF:FF:FF:FF:FF:FF":
+                        arp_map[ip_val] = mac_val
+        except Exception:
+            pass
+
     return arp_map
 
 
 def get_local_interfaces_macs() -> dict[str, str]:
     """
-    Finds MAC addresses of local network interfaces from /sys/class/net/.
+    Finds MAC addresses of local network interfaces from /sys/class/net/ or uuid.
     """
     mac_map = {}
     net_dir = "/sys/class/net"
@@ -62,6 +76,17 @@ def get_local_interfaces_macs() -> dict[str, str]:
                             mac_map[iface] = mac
         except Exception:
             pass
+
+    # Windows uuid getnode fallback
+    if not mac_map:
+        try:
+            import uuid
+            node = uuid.getnode()
+            mac = ":".join(f"{(node >> 8 * i) & 0xFF:02X}" for i in reversed(range(6)))
+            mac_map["local"] = mac
+        except Exception:
+            pass
+
     return mac_map
 
 
@@ -81,7 +106,7 @@ def is_randomized_mac(mac: str) -> bool:
 def resolve_mac_vendor(mac: str) -> str:
     """
     Resolves hardware manufacturer name using:
-    1. System OUI databases (/usr/share/hwdata/oui.txt, /usr/share/nmap/nmap-mac-prefixes).
+    1. System OUI databases (/usr/share/hwdata/oui.txt, /usr/share/nmap/nmap-mac-prefixes, Windows Nmap).
     2. Private/Randomized MAC detection (smartphones/tablets).
     """
     if not mac or mac in ("N/A", "00:00:00:00:00:00") or mac.startswith("IP_"):
@@ -90,7 +115,15 @@ def resolve_mac_vendor(mac: str) -> str:
     clean_hex = mac.replace(":", "-").replace(".", "-").upper()[:8]
     clean_nmap = mac.replace(":", "").replace("-", "").upper()[:6]
 
-    # 1. /usr/share/hwdata/oui.txt
+    # Candidate OUI database paths (Linux, macOS, Windows)
+    oui_candidates = [
+        "/usr/share/hwdata/oui.txt",
+        "/usr/share/nmap/nmap-mac-prefixes",
+        r"C:\Program Files (x86)\Nmap\nmap-mac-prefixes",
+        r"C:\Program Files\Nmap\nmap-mac-prefixes",
+    ]
+
+    # 1. Check oui.txt format
     if os.path.exists("/usr/share/hwdata/oui.txt"):
         try:
             with open("/usr/share/hwdata/oui.txt", "r", encoding="utf-8", errors="ignore") as f:
@@ -102,18 +135,23 @@ def resolve_mac_vendor(mac: str) -> str:
         except Exception:
             pass
 
-    # 2. /usr/share/nmap/nmap-mac-prefixes
-    if os.path.exists("/usr/share/nmap/nmap-mac-prefixes"):
-        try:
-            with open("/usr/share/nmap/nmap-mac-prefixes", "r", encoding="utf-8", errors="ignore") as f:
-                for line in f:
-                    if line.startswith("#") or not line.strip():
-                        continue
-                    parts = line.split(None, 1)
-                    if len(parts) == 2 and parts[0].upper() == clean_nmap:
-                        return parts[1].strip()
-        except Exception:
-            pass
+    # 2. Check nmap-mac-prefixes format (Linux / Windows)
+    for nmap_path in [
+        "/usr/share/nmap/nmap-mac-prefixes",
+        r"C:\Program Files (x86)\Nmap\nmap-mac-prefixes",
+        r"C:\Program Files\Nmap\nmap-mac-prefixes"
+    ]:
+        if os.path.exists(nmap_path):
+            try:
+                with open(nmap_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        if line.startswith("#") or not line.strip():
+                            continue
+                        parts = line.split(None, 1)
+                        if len(parts) == 2 and parts[0].upper() == clean_nmap:
+                            return parts[1].strip()
+            except Exception:
+                pass
 
     # 3. Randomized MAC detection
     if is_randomized_mac(mac):
