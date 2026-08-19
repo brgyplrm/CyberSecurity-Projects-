@@ -1,0 +1,85 @@
+# ─────────────────────────────────────────────────────────────
+# Python Bytecode & Cache
+# ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ─────────────────────────────────────────────────────────────
+# Virtual Environments
+# ─────────────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ─────────────────────────────────────────────────────────────
+# Application State, SQLite Databases & Runtime Daemons
+# ─────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.pid
+**/state/*.db
+**/state/*.pid
+**/state/*.json
+**/state/network-state.json
+**/state/registry.json
+
+# ─────────────────────────────────────────────────────────────
+# Logs & Scan Outputs
+# ─────────────────────────────────────────────────────────────
+*.log
+**/logs/*.log
+**/logs/*.txt
+last_scan.txt
+
+# Preserve directory structure
+!**/logs/.gitkeep
+!**/state/.gitkeep
+
+# ─────────────────────────────────────────────────────────────
+# IDE & Editor Specific
+# ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ─────────────────────────────────────────────────────────────
+# Operating System & Temporary Files
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
