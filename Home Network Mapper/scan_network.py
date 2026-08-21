@@ -9,11 +9,38 @@ import subprocess
 import datetime
 
 
+def get_nmap_bin() -> str | None:
+    """
+    Finds the nmap executable path across Linux, macOS, and Windows.
+    Checks system PATH and standard Windows installation directories.
+    """
+    # 1. Standard PATH lookup (handles Linux/macOS 'nmap' and Windows 'nmap.exe')
+    for name in ["nmap", "nmap.exe"]:
+        path = shutil.which(name)
+        if path:
+            return path
+
+    # 2. Common Windows paths (if user forgot to add to Environment Variables)
+    if os.name == "nt" or "WINDIR" in os.environ:
+        windows_candidates = [
+            r"C:\Program Files (x86)\Nmap\nmap.exe",
+            r"C:\Program Files\Nmap\nmap.exe",
+            os.path.expandvars(r"%ProgramFiles(x86)%\Nmap\nmap.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Nmap\nmap.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Nmap\nmap.exe"),
+        ]
+        for win_path in windows_candidates:
+            if os.path.exists(win_path):
+                return win_path
+
+    return None
+
+
 def is_nmap_installed() -> bool:
     """
-    Checks if the 'nmap' binary is installed and available in the system PATH.
+    Checks if the 'nmap' binary is installed and available.
     """
-    return shutil.which("nmap") is not None
+    return get_nmap_bin() is not None
 
 
 def get_nmap_install_instructions() -> list[str]:
@@ -21,7 +48,7 @@ def get_nmap_install_instructions() -> list[str]:
     Returns platform-specific instructions for installing Nmap.
     """
     return [
-        "'nmap' was not found on your system PATH.",
+        "'nmap' was not found on your system PATH or default directories.",
         "Nmap is required to perform network discovery scans.",
         "",
         "How to install Nmap:",
@@ -78,19 +105,18 @@ def derive_subnet(ip_addr: str) -> str:
 def run_nmap_scan(target_subnet: str, timeout_seconds: int = 60) -> tuple[bool, str]:
     """
     Executes a ping/host discovery scan using `nmap -sn <target_subnet>`.
-    
-    Algorithm & Steps:
-    1. Ensures target output directories exist.
-    2. Logs scan start event to activity.log.
-    3. Invokes `nmap -sn` subprocess.
-    4. Writes raw stdout output to `logs/last_scan.txt`.
-    5. Logs completion status to activity.log.
-    6. Returns tuple: (success: bool, raw_output_or_error: str).
+    Includes automatic fallback to `--unprivileged` mode on Windows / restricted environments.
     """
     ensure_logs_directory()
     log_activity(f"Scan started on target: {target_subnet}")
 
-    cmd = ["nmap", "-sn", target_subnet]
+    nmap_bin = get_nmap_bin()
+    if not nmap_bin:
+        err_msg = "Error: 'nmap' is not installed or not found in system PATH."
+        log_activity(f"Scan error: {err_msg}")
+        return False, err_msg
+
+    cmd = [nmap_bin, "-sn", target_subnet]
     try:
         process = subprocess.run(
             cmd,
@@ -107,10 +133,30 @@ def run_nmap_scan(target_subnet: str, timeout_seconds: int = 60) -> tuple[bool, 
                 f.write(raw_output)
             log_activity(f"Scan completed successfully for {target_subnet}")
             return True, raw_output
-        else:
-            err_msg = process.stderr.strip() or process.stdout.strip() or f"Process exited with code {process.returncode}"
-            log_activity(f"Scan failed on {target_subnet}: {err_msg}")
-            return False, f"Nmap Error: {err_msg}"
+
+        # If Nmap failed (e.g. Windows unprivileged / Npcap driver permission restriction),
+        # automatically retry with --unprivileged flag
+        err_output = process.stderr.strip() or process.stdout.strip()
+        if os.name == "nt" or "dnet" in err_output.lower() or "permission" in err_output.lower() or "device" in err_output.lower():
+            log_activity(f"Retrying scan with --unprivileged flag on {target_subnet}...")
+            unpriv_cmd = [nmap_bin, "-sn", "--unprivileged", target_subnet]
+            process2 = subprocess.run(
+                unpriv_cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+                check=False
+            )
+            if process2.returncode == 0:
+                raw_output = process2.stdout
+                with open(LAST_SCAN_RAW_PATH, "w", encoding="utf-8") as f:
+                    f.write(raw_output)
+                log_activity(f"Scan completed successfully with --unprivileged for {target_subnet}")
+                return True, raw_output
+
+        err_msg = process.stderr.strip() or process.stdout.strip() or f"Process exited with code {process.returncode}"
+        log_activity(f"Scan failed on {target_subnet}: {err_msg}")
+        return False, f"Nmap Error: {err_msg}"
 
     except FileNotFoundError:
         err_msg = "Error: 'nmap' is not installed or not found in system PATH."
